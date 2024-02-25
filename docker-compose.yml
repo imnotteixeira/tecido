@@ -1,0 +1,38 @@
+version: "3"
+services:
+    web-server:
+        build:
+            context: .
+            dockerfile: webserver.dockerfile
+            target: image-prod
+            args:
+                - PORT=8081
+        environment:
+            - NODE_ENV=production
+            - ASSETS_PORT=8080
+        ports:
+            - "8081:8081"
+        volumes:
+            - ./src:/usr/src/app/src
+        depends_on: 
+            - asset-server
+    asset-server:
+        build:
+            context: .
+            dockerfile: asset-server.dockerfile
+        ports:
+            - "8080:80"
+    web-server-dev:
+        build:
+            context: .
+            dockerfile: webserver.dockerfile
+            target: image-dev
+            args:
+                - PORT=8081
+        environment:
+            - NODE_ENV=development
+            - ASSETS_PORT=8081
+        ports:
+            - "8081:8081"
+        volumes:
+            - ./src:/usr/src/app/src
