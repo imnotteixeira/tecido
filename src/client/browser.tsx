@@ -8,7 +8,9 @@ import { containerId } from '../shared/constants';
 import { PageContext } from '../shared';
 
 declare global {
-    interface Window { __APP_CONTEXT__: PageContext }
+    interface Window { 
+        __APP_CONTEXT__: PageContext, 
+    }
 }
 
 const context = window.__APP_CONTEXT__

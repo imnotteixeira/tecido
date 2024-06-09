@@ -1,14 +1,15 @@
 import fs from "node:fs/promises"
 import { Router, Request, Response } from "express";
-import homePageHandler from "./home"
-import dashboardPageHandler from "./spreadsheet"
+import { HomeHandler } from "./home"
+import { SpreadsheetHandler } from "./spreadsheet"
 import { PageType } from "../../shared/constants";
 import { ViteDevServer } from "vite";
 import { SSRContentBuilder } from "../ssr.js";
-import Container from "typedi";
-import { APP_CONFIG_MODULE_ID, AppConfig } from "../module/index.js";
+import { ServiceModule } from "../module/index.js";
+import { TYPES } from "../module/types.js";
+import { AppConfig } from "../module/appConfig.js";
 
-export type PageHandler = (router: Router, getTemplate: (url: string) => Promise<string>, renderer: SSRContentBuilder, viteDevServer?: ViteDevServer) => void
+export type PageRegisterer = (router: Router, getTemplate: (url: string) => Promise<string>, renderer: SSRContentBuilder, viteDevServer?: ViteDevServer) => void
 
 export interface PageContext {
     pageType: PageType
@@ -26,22 +27,25 @@ export type AsyncRedirectHandler = (req: Request<any>, res: Response<any>) => Pr
 export type SyncRedirectHandler = (req: Request<any>, res: Response<any>) => void
 type PageRedirectHandler = SyncRedirectHandler | AsyncRedirectHandler
 
-export interface IRouteRenderHandler<T extends PageContext> {
-    handle: PageRequestHandler<T>
+interface IRouteHandler {
+    register: PageRegisterer
 }
-export interface IRouteRedirectHandler {
+export interface IRouteRenderHandler<T extends PageContext> extends IRouteHandler {
+    handle: PageRequestHandler<T>,
+}
+export interface IRouteRedirectHandler extends IRouteHandler {
     handle: PageRedirectHandler
 }
 
-const PAGE_HANDLERS = [
-    homePageHandler,
-    dashboardPageHandler,
+const PAGE_HANDLERS: IRouteHandler[] = [
+    ServiceModule.get(HomeHandler),
+    ServiceModule.get(SpreadsheetHandler),
 ]
 
 export default async (viteDevServer?: ViteDevServer) => {
     
     const app = Router();
-    const config = Container.get<AppConfig>(APP_CONFIG_MODULE_ID)
+    const config = ServiceModule.get<AppConfig>(TYPES.AppConfig)
 
     let getTemplate: (url: string) => Promise<string>
     let renderer: SSRContentBuilder;
@@ -59,9 +63,7 @@ export default async (viteDevServer?: ViteDevServer) => {
         renderer = (await import('./dist/server/ssr.js')).ssr
     }
 
-    const registerPage = (pageHandler: PageHandler) => pageHandler(app, getTemplate, renderer, viteDevServer)
-    
-    PAGE_HANDLERS.forEach(registerPage)
+    PAGE_HANDLERS.forEach(pageHandler => pageHandler.register(app, getTemplate, renderer, viteDevServer))
 
     return app;
 };

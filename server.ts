@@ -7,14 +7,13 @@ import {ViteDevServer} from "vite";
 import pageHandlers from "./src/server/pages"
 import apiRoutes from "./src/server/api"
 
-import initModules, { APP_CONFIG_MODULE_ID, AppConfig } from "./src/server/module"
-import Container from 'typedi';
+import { ServiceModule } from "./src/server/module"
+import { AppConfig } from './src/server/module/appConfig';
+import { TYPES } from './src/server/module/types';
 
 console.info('Server booting...');
 
-initModules();
-
-const appConfig = Container.get<AppConfig>(APP_CONFIG_MODULE_ID)
+const appConfig = ServiceModule.get<AppConfig>(TYPES.AppConfig)
 console.info("App Config", appConfig);
 
 const app = express()

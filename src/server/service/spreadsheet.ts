@@ -1,7 +1,7 @@
-import { Service } from 'typedi';
+import { injectable } from "inversify";
 
 
-@Service()
+@injectable()
 class SpreadsheetService {
     
     getSpreadsheets = () => {
