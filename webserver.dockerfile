@@ -6,8 +6,9 @@ ARG PORT
 WORKDIR /usr/src/app
 
 COPY ${WEBSERVER_DIR}/package*.json ./
-COPY ${WEBSERVER_DIR}/tsconfig.json ./
-COPY ${WEBSERVER_DIR}/*.webpack.config.js ./
+COPY ${WEBSERVER_DIR}/tsconfig*.json ./
+COPY ${WEBSERVER_DIR}/vite.config.js ./
+COPY ${WEBSERVER_DIR}/index.html ./
 
 ENV PORT=${PORT}
 
@@ -27,15 +28,15 @@ COPY ${WEBSERVER_DIR}/src/ src/
 FROM build as image-dev
 
 # Build for development
-RUN npm run server:build-dev
+RUN npm run build:client
 
 # Start the server
-CMD npm run server:start
+CMD npm run dev
 
 FROM build as image-prod
 
 # Build for production
-RUN npm run server:build
+RUN npm run build:server
 
 # Start the server
-CMD npm run server:start
+CMD npm start

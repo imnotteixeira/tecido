@@ -1,24 +1,21 @@
-import { Router } from "express";
-import Container, { Inject, Service } from "typedi";
-import { DefaultPageProps, IRouteRenderHandler, PageData, PageHandler, PageResponse, SyncPageRequestHandler } from ".";
+import { type Request, type Response, Router } from "express";
+import Container, { Service } from "typedi";
+import { IRouteRenderHandler, PageData, PageHandler, SyncPageRequestHandler } from ".";
 import { HomePageContext } from "../../shared";
-import { PageId, PageType } from "../../shared/constants";
-import ssrEntryPoint from "../ssr"
+import { PageType, containerId } from "../../shared/constants";
+import { SSRContentBuilder } from "../ssr"
+import { ViteDevServer } from "vite";
+import { APP_CONFIG_MODULE_ID, AppConfig } from "../module";
 
 const router = Router();
 @Service()
 class HomeHandler implements IRouteRenderHandler<HomePageContext> {
     
-    @Inject("DEFAULT_PAGE_PROPS")
-    defaultPageProps: DefaultPageProps;
-
     constructor() {}
     
     handle: SyncPageRequestHandler<HomePageContext> = (): PageData<HomePageContext> => {
         
         return {
-            pageId: PageId.INDEX,
-            defaultPageProps: this.defaultPageProps,
             context: {
                 pageType: PageType.HOME,
             }
@@ -26,19 +23,40 @@ class HomeHandler implements IRouteRenderHandler<HomePageContext> {
     }
 }
 
-const registerer: PageHandler = (app: Router) => {
+const registerer: PageHandler = (
+    app: Router, 
+    getTemplate: (url: string) => Promise<string>,
+    renderer: SSRContentBuilder,
+    viteDevServer?: ViteDevServer
+) => {
     app.use("/", router);
 
-    router.get("/", (req: any, res: PageResponse, next: any) => {
-        const pageResponseData = Container.get(HomeHandler).handle(req);
+    router.get("/", async (req: Request, res: Response, next: any) => {
+        
+        try {
+            // can this be generalized? as all renderers will likely have to replace stuff and use the generic render/template
+            const appConfig = Container.get<AppConfig>(APP_CONFIG_MODULE_ID)
+            const url = req.originalUrl.replace(appConfig.BASE_PATH, "")
+            
+            const {context} = Container.get(HomeHandler).handle(req);
 
-        const pageContext = pageResponseData.context
-
-        res.render(pageResponseData.pageId, {
-            defaultPageProps: pageResponseData.defaultPageProps,
-            body: ssrEntryPoint(pageContext),
-            context: JSON.stringify(pageContext)
-        })
+            const rendered = await renderer(context)
+        
+            const html = (await getTemplate(url))
+              .replace(`<!--app-head-->`, rendered.head ?? '')
+              .replace(`<!--app-html-->`, rendered.html ?? '')
+              .replace(`<!--app-container-id-->`, containerId)
+              .replace(`<!--app-context-->`, encodeURI(JSON.stringify(context)))
+        
+            res
+                .status(200)
+                .set({ 'Content-Type': 'text/html' })
+                .send(html)
+          } catch (e) {
+            viteDevServer?.ssrFixStacktrace(e as Error)
+            console.error((e as Error).stack)
+            res.status(500).end((e as Error).stack)
+          }
     })
 
 }

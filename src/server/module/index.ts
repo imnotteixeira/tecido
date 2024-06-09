@@ -1,40 +1,26 @@
 import { Container } from "typedi"
-import { version as reactVersion } from 'react';
-import { version as reactDomVersion } from 'react-dom/server';
-import { containerId } from '../../shared/constants';
-import ssrEntryPoint from '../ssr';
-import { DefaultPageProps } from "../pages";
+import { config as initDotenvConfig } from "dotenv-flow"
 
-export default (isProd: boolean, assetsPort: string) => {
+export const APP_CONFIG_MODULE_ID = "APP_CONFIG"
 
-    const suffix = isProd ? '.production.min.js' : '.development.js';
-    
-    // const assetsPath = `http://localhost:${assetsPort}`; // TODO: Maybe this needs changing for production
-    const assetsPath = `https://799e-2a01-11-a10-40f0-bda0-c960-44bd-f430.ngrok-free.app`; // TODO: Maybe this needs changing for production
-
-    const defaultPageProps: DefaultPageProps = {
-        reactVersion,
-        reactDomVersion,
-        suffix,
-        containerId,
-        assetsPath
-    }
-
-    Container.set("DEFAULT_PAGE_PROPS", defaultPageProps)
-
+export default () => {
     initAppConfig()
+    // Init other modules...
 }
 
 export interface AppConfig {
-    // TODO
+    IS_PRODUCTION: boolean,
+    BASE_PATH: string
+    PORT: number
 }
 
 const REQUIRED_CONFIG_FIELDS: string[] = [
     // TODO
 ]
 
-const initAppConfig = async () => {
-    require('dotenv-flow').config();
+const initAppConfig = () => {
+    
+    initDotenvConfig();
 
     let missingRequiredConfig = false;
     
@@ -50,9 +36,12 @@ const initAppConfig = async () => {
     }
 
     const config: AppConfig = {
-        // TODO
+        IS_PRODUCTION: process.env.NODE_ENV === 'production',
+        BASE_PATH: process.env.BASE_PATH || '/',
+        PORT: parseInt(process.env.PORT || "5173")
     }
 
-
-    Container.set<AppConfig>("APP_CONFIG", config)
+    Container.set<AppConfig>(APP_CONFIG_MODULE_ID, config)
+    
+    return config;
 }

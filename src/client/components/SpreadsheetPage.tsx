@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SpreadsheetPageContext } from '../../shared';
+import Spreadsheet from './Spreadsheet/Spreadsheet';
 
 const SpreadsheetPage: React.FC<SpreadsheetPageContext> = (props) => {
     
@@ -16,6 +17,7 @@ const SpreadsheetPage: React.FC<SpreadsheetPageContext> = (props) => {
         <div>
             <h1>Spreadsheet</h1>
             <h2>{props.spreadsheetName}</h2>
+            <Spreadsheet />
         </div>
     );
 }
